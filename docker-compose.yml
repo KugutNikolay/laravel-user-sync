@@ -1,0 +1,51 @@
+version: '3.9'
+services:
+    mysqldb:
+        image: 'mysql:latest'
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_DATABASE: ${DB_DATABASE}
+        volumes:
+            - 'user-sync-mysql:/var/lib/mysql'
+        ports:
+            - '3308:3306'
+        networks:
+            - user-sync
+
+    nginx:
+        build:
+            context: './docker/nginx'
+        restart: always
+        depends_on:
+            - php-fpm
+        volumes:
+            - '.:/var/www/html:cached'
+            - './docker/logs/nginx/:/var/log/nginx'
+            - './docker/nginx/sites/default.conf:/etc/nginx/sites-available/default.conf'
+        ports:
+            - '8084:80'
+        networks:
+            - user-sync
+
+    php-fpm:
+        build:
+            context: './docker/php-fpm'
+        restart: always
+        depends_on:
+            - mysqldb
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - user-sync
+        expose:
+            - '9000'
+
+
+networks:
+    user-sync:
+        driver: bridge
+
+volumes:
+    user-sync-mysql:
+        driver: local
